@@ -1,0 +1,157 @@
+
+< アーキテクチャ(構造と関係性) >
+1.Next.js(フロント)
+2.Express(APIサーバー)
+3.MySQL(DB:データベース)
+
+
+< MySQLのデータ構造 >
+
+「データベース名」 => ts_todo
+
+「テーブル名」
+1.users
+2.todos
+
+
+「テーブル詳細(カラム)」
+
+< users => id, name, password(3カラム)の場合 >
+
+create table users(id int unsigned auto_increment not null, name varchar(255) unique, password varchar(255), PRIMARY KEY (id));
+
+mysql> describe users;
++----------+------------------+------+-----+---------+----------------+
+| Field    | Type             | Null | Key | Default | Extra          |
++----------+------------------+------+-----+---------+----------------+
+| id       | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
+| name     | varchar(255)     | YES  | UNI | NULL    |                |
+| password | varchar(255)     | YES  |     | NULL    |                |
++----------+------------------+------+-----+---------+----------------+
+3 rows in set (0.02 sec)
+
+
+< todos => id, user_id, todo, detail, handler, date, start(7カラム)の場合 >
+
+create table todos(id int unsigned auto_increment not null, user_id int not null,todo varchar(20) not null,detail varchar(300) not null,
+handler varchar(10) not null, date varchar(20) not null, start varchar(20) not null, PRIMARY KEY (id));
+
+mysql> describe todos;
++---------+------------------+------+-----+---------+----------------+
+| Field   | Type             | Null | Key | Default | Extra          |
++---------+------------------+------+-----+---------+----------------+
+| id      | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
+| user_id | int(11)          | NO   |     | NULL    |                |
+| todo    | varchar(20)      | NO   |     | NULL    |                |
+| detail  | varchar(300)     | NO   |     | NULL    |                |
+| handler | varchar(10)      | NO   |     | NULL    |                |
+| date    | varchar(20)      | NO   |     | NULL    |                |
+| start   | varchar(20)      | NO   |     | NULL    |                |
++---------+------------------+------+-----+---------+----------------+
+7 rows in set (0.03 sec)
+
+
+< todosデータ構造定義 & 初期データの追加 >
+
+todos:[ 
+    {id:1,user_id:1,todo:'Reactの学習',detail:'Reactを学ぶロボ玉',handler:'ロボ玉試作1号機',date:'2100-12-12',start:'1995-12-12'},
+    {id:2,user_id:1,todo:'TypeScriptの学習',detail:'TypeScriptを学ぶロボ玉',handler:'ロボ玉試作2号機',date:'2100-12-12',start:'1995-12-12'},
+    {id:3,user_id:1,todo:'Nodeの学習',detail:'Nodeを学ぶロボ玉',handler:'ロボ玉試作3号機',date:'2100-12-12',start:'1995-12-12'}
+]
+
+
+insert into todos(id,user_id,todo,detail,handler,date,start) values(1,1,'Reactの学習','Reactを学ぶロボ玉','ロボ玉試作1号機','2100-12-12','1995-12-12');
+
+mysql> select * from todos;
++----+---------+----------------+-------------------------+------------------------+------------+------------+
+| id | user_id | todo           | detail                  | handler                | date       | start      |
++----+---------+----------------+-------------------------+------------------------+------------+------------+
+|  1 |       1 | Reactの学習    | Reactを学ぶロボ玉          | ロボ玉試作1号機          | 2100-12-12 | 1995-12-12 |
++----+---------+----------------+-------------------------+------------------------+------------+------------+
+1 row in set (0.00 sec)
+
+
+
+< APIサーバーとの通信 >
+ExpressのAPIサーバーは窓口として、MySQLとの中継役を担っています！
+
+axiosでAPIサーバーと通信する！
+
+< Todoデータの通信 >
+1.初期表示(App.tsxのuseEffect) => getメソッドでデータを取得
+
+2.新規作成 => postメソッドで新規作成(insert into・データベースの変更)
+
+3.削除機能 => postメソッドで削除(delete・データベースの変更)
+
+4.更新機能 => postメソッドで更新(update・データベースの変更)
+
+< Userデータの通信 >
+
+1.新規登録 => postメソッドで新規作成
+
+2.ログイン => getメソッドでデータを取得
+
+
+< ログイン・未ログイン状態による表示の切り替え！ >
+
+設計段階で、各コンポーネントの役割を明確化(言語化)する！
+
+1.App
+
+2.Nav
+
+3.TodoList
+
+4.TodoCreate
+
+5.TodoCreate
+
+「ログインか、未ログインかで、表示を切り替える！」
+
+< ログイン状態 >
+・ToDoタスクを追加できるフォームが表示される。
+・登録したToDoタスクの一覧が表示される。
+
+< 未ログイン状態 >
+・ログインページとログインページに遷移するリンクのみ表示される。
+
+サインイン状態によってトップページの内容を切り替えよう
+それでは、サインイン状態によってトップページを以下のように変更します。
+
+
+< セッションを利用して、データを保持する！ >
+1.リロードしてもデータを保持する！
+=> ローカルストレージまたは、セッション機能
+
+
+// userのログイン
+app.get(`/api/userlogin`,(req, res)=> {
+
+    console.log('get通信！ ユーザー・ログイン');
+
+    const user = req.query.user;
+    const password = req.query.password;
+
+    req.session.user = user;            // sessionオブジェクトにuserキーを設定 & 変数userを代入
+    req.session.password = password;    // sessionオブジェクトにpasswordキーを設定 & 変数passwordを代入
+
+    console.log(req.session);
+
+
+// ターミナル(console.log(req.session)の結果)
+Session {
+  cookie: {
+    path: '/',
+    _expires: 2021-10-23T00:37:56.445Z,
+    originalMaxAge: 86400000,
+    httpOnly: true
+  },
+  user: 'ロボ玉',
+  password: 'robo'
+}
+
+< セッションを利用する >
+「セッションを利用する目的」 => ログインユーザーの情報を保存して、それを基にリロードされたとしても、情報が保持されている状態を作りたい！
+
+< ローカルストレージを利用する >
